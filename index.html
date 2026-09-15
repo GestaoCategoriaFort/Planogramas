@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planogramas da Loja</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --card:#ffffff; --text:#1a2430; --muted:#5a6b7b;
+    --brand:#0d6efd; --brand-d:#0a58ca; --border:#e2e8ee; --shadow:0 1px 3px rgba(16,32,48,.08),0 6px 20px rgba(16,32,48,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#0e141b; --card:#161f29; --text:#e8eef4; --muted:#9fb0c0; --brand:#4d9bff; --brand-d:#3b82f6; --border:#243244; --shadow:0 1px 3px rgba(0,0,0,.4); }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,Arial,sans-serif;background:var(--bg);color:var(--text);
+       -webkit-font-smoothing:antialiased;line-height:1.4;}
+  header{background:var(--card);border-bottom:1px solid var(--border);padding:22px 16px;position:sticky;top:0;z-index:5;}
+  .wrap{max-width:820px;margin:0 auto;padding:0 16px;}
+  h1{margin:0;font-size:1.45rem;letter-spacing:-.01em;display:flex;align-items:center;gap:10px;}
+  h1 .ic{font-size:1.5rem}
+  .sub{color:var(--muted);font-size:.9rem;margin-top:4px}
+  .searchbox{margin:16px auto 0;max-width:820px;}
+  input[type=search]{width:100%;padding:13px 16px;font-size:1rem;border:1px solid var(--border);border-radius:12px;
+       background:var(--card);color:var(--text);outline:none;}
+  input[type=search]:focus{border-color:var(--brand)}
+  main{max-width:820px;margin:20px auto 60px;padding:0 16px;}
+  .list{display:flex;flex-direction:column;gap:10px}
+  a.item{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--border);
+       border-radius:14px;padding:15px 16px;text-decoration:none;color:var(--text);box-shadow:var(--shadow);
+       transition:transform .08s ease, border-color .15s ease;}
+  a.item:hover{transform:translateY(-1px);border-color:var(--brand)}
+  a.item:active{transform:translateY(0)}
+  .pdf-ic{flex:0 0 auto;width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,#ff5f6d,#c1121f);
+       color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.72rem;letter-spacing:.5px}
+  .meta{flex:1 1 auto;min-width:0}
+  .name{font-weight:600;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .size{color:var(--muted);font-size:.82rem;margin-top:2px}
+  .chev{flex:0 0 auto;color:var(--muted);font-size:1.3rem}
+  .state{text-align:center;color:var(--muted);padding:50px 20px}
+  .state .big{font-size:2.4rem;margin-bottom:10px}
+  .state code{background:var(--card);padding:2px 7px;border-radius:6px;border:1px solid var(--border)}
+  footer{max-width:820px;margin:0 auto;padding:24px 16px 40px;color:var(--muted);font-size:.8rem;text-align:center}
+  .spin{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--brand);border-radius:50%;
+       animation:r .8s linear infinite;margin:40px auto}
+  @keyframes r{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1><span class="ic">🗂️</span> Planogramas da Loja</h1>
+    <div class="sub">Toque em um planograma para abrir ou baixar o PDF.</div>
+  </div>
+  <div class="wrap searchbox">
+    <input type="search" id="q" placeholder="🔎 Buscar planograma por nome...">
+  </div>
+</header>
+
+<main>
+  <div id="loader" class="spin"></div>
+  <div id="list" class="list"></div>
+  <div id="empty" class="state" style="display:none"></div>
+</main>
+
+<footer id="foot"></footer>
+
+<script>
+// ==== CONFIGURAÇÃO ====
+// Pasta onde ficam os PDFs. Deixe "" para pegar os PDFs da raiz do repositório
+// (basta arrastar os PDFs direto, sem criar pasta nenhuma).
+const PASTA = "";
+// ======================
+
+const listEl = document.getElementById('list');
+const emptyEl = document.getElementById('empty');
+const loaderEl = document.getElementById('loader');
+const footEl = document.getElementById('foot');
+let arquivos = [];
+
+// Descobre owner/repo automaticamente pela URL do GitHub Pages
+function detectRepo(){
+  const host = location.hostname;                 // usuario.github.io
+  const owner = host.split('.')[0];
+  const parts = location.pathname.split('/').filter(Boolean);
+  // se estiver dentro de /repo/, o primeiro segmento é o repositório;
+  // se for página de usuário (raiz), o repositório é o próprio host.
+  const repo = parts.length ? parts[0] : host;
+  return {owner, repo};
+}
+
+function fmtSize(b){
+  if(b==null) return '';
+  if(b<1024) return b+' B';
+  if(b<1048576) return (b/1024).toFixed(0)+' KB';
+  return (b/1048576).toFixed(1)+' MB';
+}
+function nomeBonito(f){
+  return f.replace(/\.pdf$/i,'').replace(/[_-]+/g,' ').trim();
+}
+
+function render(filtro=''){
+  const f = filtro.toLowerCase();
+  const vis = arquivos.filter(a => nomeBonito(a.name).toLowerCase().includes(f));
+  listEl.innerHTML = '';
+  if(!vis.length){
+    emptyEl.style.display='block';
+    emptyEl.innerHTML = arquivos.length
+      ? '<div class="big">🔍</div>Nenhum planograma encontrado para essa busca.'
+      : '<div class="big">📭</div>Nenhum PDF publicado ainda.<br>Suba os arquivos no repositório e eles aparecem aqui automaticamente.';
+    return;
+  }
+  emptyEl.style.display='none';
+  vis.sort((a,b)=>nomeBonito(a.name).localeCompare(nomeBonito(b.name),'pt-BR'));
+  for(const a of vis){
+    const link = document.createElement('a');
+    link.className='item';
+    link.href = a.path;        // servido pelo próprio GitHub Pages (abre inline)
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.innerHTML =
+      '<span class="pdf-ic">PDF</span>'+
+      '<span class="meta"><span class="name"></span><span class="size">'+fmtSize(a.size)+'</span></span>'+
+      '<span class="chev">›</span>';
+    link.querySelector('.name').textContent = nomeBonito(a.name);
+    listEl.appendChild(link);
+  }
+}
+
+async function carregar(){
+  const {owner, repo} = detectRepo();
+  const dir = PASTA ? '/'+PASTA.replace(/^\/|\/$/g,'') : '';
+  const api = `https://api.github.com/repos/${owner}/${repo}/contents${dir}`;
+  try{
+    const r = await fetch(api, {headers:{'Accept':'application/vnd.github.v3+json'}});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const data = await r.json();
+    const base = PASTA ? PASTA.replace(/^\/|\/$/g,'')+'/' : '';
+    arquivos = (Array.isArray(data)?data:[])
+      .filter(x => x.type==='file' && /\.pdf$/i.test(x.name))
+      .map(x => ({name:x.name, size:x.size, path:base+encodeURIComponent(x.name)}));
+    loaderEl.style.display='none';
+    render(document.getElementById('q').value);
+    footEl.textContent = arquivos.length + ' planograma(s) • Atualizado direto do repositório';
+  }catch(e){
+    loaderEl.style.display='none';
+    emptyEl.style.display='block';
+    emptyEl.innerHTML='<div class="big">⚠️</div>Não consegui carregar a lista.<br>'+
+      'Confira se o repositório é <b>público</b> e se os PDFs já foram enviados.';
+  }
+}
+
+document.getElementById('q').addEventListener('input', e=>render(e.target.value));
+carregar();
+</script>
+</body>
+</html>
