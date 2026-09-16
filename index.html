@@ -35,7 +35,9 @@
   .stripes{flex:0 0 auto;width:74px;height:74px;border-radius:12px;
        background:repeating-linear-gradient(48deg,var(--brand) 0 9px,#e6b94e 9px 20px)}
   .head-txt{display:flex;flex-direction:column;gap:9px}
-  .head-txt h1{margin:0;font-family:'Montserrat';font-weight:700;font-size:1.55rem;letter-spacing:-.3px;color:#fff;line-height:1}
+  .head-txt h1{margin:0;font-family:'Montserrat';font-weight:700;font-size:1.55rem;letter-spacing:-.3px;color:#fff;line-height:1.05;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .head-txt h1 .loja{font-size:.82rem;font-weight:800;letter-spacing:.5px;color:#1b232c;
+       background:var(--gold);padding:3px 11px;border-radius:20px;white-space:nowrap}
   .ic-label{display:flex;align-items:center;gap:8px;font-family:'Montserrat';font-weight:700;
        font-size:.62rem;letter-spacing:2.5px;color:#cdd7e6}
   .ic-label .bars{display:inline-flex;align-items:flex-end;gap:2px;height:14px}
@@ -132,7 +134,7 @@
     <div class="brand-left">
       <div class="stripes"></div>
       <div class="head-txt">
-        <h1>Planogramas</h1>
+        <h1>Planogramas <span class="loja">Loja 365</span></h1>
         <div class="ic-label"><span class="bars"><i></i><i></i><i></i><i></i></span> INTELIGÊNCIA COMERCIAL</div>
       </div>
     </div>
@@ -195,8 +197,9 @@ function parseDate(name){ const m=name.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
   return m ? {label:`${m[1]}/${m[2]}/${m[3]}`, key:m[3]+m[2]+m[1]} : null; }
 function nomeBonito(name){
   return name.replace(/\.pdf$/i,'')
-             .replace(/^\d{2}\.\d{2}\.\d{4}\s*-\s*/,'')
-             .replace(/\s*-\s*/g,' · ')
+             .replace(/^\d{2}\.\d{2}\.\d{4}\s*-\s*/,'')   // remove a data do começo
+             .replace(/^planograma\s*-\s*/i,'')            // remove "Planograma -"
+             .replace(/\s*-\s*/g,' · ')                     // separadores restantes
              .trim();
 }
 // Categoria = 1ª pasta do caminho, mantendo o número do corredor.
