@@ -199,13 +199,13 @@ function nomeBonito(name){
              .replace(/\s*-\s*/g,' · ')
              .trim();
 }
-// Categoria = 1ª pasta do caminho. Ex.: "02 - Líquida/arquivo.pdf" -> "Líquida"
+// Categoria = 1ª pasta do caminho, mantendo o número do corredor.
+// Ex.: "02 - Líquida/arquivo.pdf" -> exibe "02 - Líquida" (ordena pelo número).
 function catFromPath(path){
   const parts=path.split('/');
   if(parts.length<2) return {sort:'￿', label:'Geral'};
-  const raw=parts[0];
-  const label=(raw.replace(/^\d+\s*[-.–]\s*/,'').trim())||raw;
-  return {sort:raw.toLowerCase(), label};
+  const raw=parts[0].trim();
+  return {sort:raw.toLowerCase(), label:raw};
 }
 function esc(s){ return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 
