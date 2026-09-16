@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Planogramas · Fort Atacadista</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231F497D'/%3E%3Cg stroke='%23e6b94e' stroke-width='11'%3E%3Cline x1='18' y1='82' x2='82' y2='18'/%3E%3Cline x1='42' y1='96' x2='96' y2='42'/%3E%3Cline x1='4' y1='58' x2='58' y2='4'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -13,11 +14,11 @@
     --fort-red:#e30613; --fort-yellow:#ffd200; --gold:#d8b45a;
     --bg:#f2f4f7; --card:#ffffff; --text:#1b232c; --muted:#657283;
     --border:#e6ebf1; --shadow:0 1px 2px rgba(20,30,45,.06),0 8px 24px rgba(20,30,45,.06);
-    --radius:16px;
+    --radius:16px; --skel:#eef1f5;
   }
   @media (prefers-color-scheme: dark){
     :root{ --bg:#0f151c; --card:#18212c; --text:#e9eef4; --muted:#9aa8b8;
-           --border:#26313f; --brand-tint:rgba(90,140,205,.16);
+           --border:#26313f; --brand-tint:rgba(90,140,205,.16); --skel:#20293480;
            --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35); }
   }
   *{box-sizing:border-box}
@@ -25,7 +26,7 @@
   body{font-family:'Inter',system-ui,-apple-system,Arial,sans-serif;background:var(--bg);color:var(--text);
        -webkit-font-smoothing:antialiased;line-height:1.45;}
 
-  /* ---------- Cabeçalho de marca (estilo Inteligência Comercial) ---------- */
+  /* ---------- Cabeçalho (Inteligência Comercial) ---------- */
   .topbar{background:var(--brand);color:#fff;box-shadow:0 3px 16px rgba(20,30,45,.18);
           position:sticky;top:0;z-index:10;}
   .bar-in{max-width:1000px;margin:0 auto;padding:16px 20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
@@ -43,7 +44,6 @@
   .ic-label .bars i:nth-child(3){height:8px}.ic-label .bars i:nth-child(4){height:14px}
   .logos{margin-left:auto;display:flex;align-items:center}
   .logo-img{height:52px;width:auto;display:none}
-  /* Lockup em texto (aparece enquanto você não subir a imagem oficial "logo.png") */
   .wordmark{display:flex;align-items:center;gap:14px;color:#e2e8f2}
   .wordmark .grp{display:flex;flex-direction:column;line-height:1;font-family:'Montserrat';text-align:right}
   .wordmark .grp small{font-size:.58rem;letter-spacing:2px;font-weight:600;opacity:.85}
@@ -51,25 +51,31 @@
   .wordmark .sep{width:1px;height:38px;background:rgba(255,255,255,.35)}
   .wordmark .fort{font-family:'Montserrat';font-weight:800;font-style:italic;font-size:1.35rem;letter-spacing:-.5px;text-align:center}
   .wordmark .fort b{display:block;font-style:normal;font-size:.6rem;letter-spacing:2px;margin-top:1px}
-  @media(max-width:640px){
-    .bar-in{padding:14px 16px;gap:12px}
-    .brand-left{padding:8px 14px 8px 10px;gap:12px}
-    .stripes{width:56px;height:56px}
-    .head-txt h1{font-size:1.25rem}
-    .logos{margin-left:0;width:100%;justify-content:flex-start}
-  }
 
-  /* ---------- Busca ---------- */
-  .toolbar{max-width:900px;margin:20px auto 0;padding:0 18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  /* ---------- Barra de busca ---------- */
+  .toolbar{max-width:1000px;margin:20px auto 0;padding:0 20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
   .search{position:relative;flex:1 1 260px}
-  .search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);opacity:.5}
-  input[type=search]{width:100%;padding:13px 16px 13px 42px;font-size:1rem;border:1px solid var(--border);
-       border-radius:12px;background:var(--card);color:var(--text);outline:none;transition:border-color .15s,box-shadow .15s}
+  .search .ic-s{position:absolute;left:14px;top:50%;transform:translateY(-50%);opacity:.5;pointer-events:none}
+  input[type=search]{width:100%;padding:13px 42px 13px 42px;font-size:1rem;border:1px solid var(--border);
+       border-radius:12px;background:var(--card);color:var(--text);outline:none;transition:border-color .15s,box-shadow .15s;
+       -webkit-appearance:none}
+  input[type=search]::-webkit-search-cancel-button{display:none}
   input[type=search]:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-tint)}
-  .count{font-size:.85rem;color:var(--muted);white-space:nowrap;font-weight:500}
+  .clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:none;background:transparent;
+       color:var(--muted);font-size:1.3rem;line-height:1;cursor:pointer;display:none;padding:4px 8px;border-radius:8px}
+  .clear:hover{background:var(--brand-tint);color:var(--text)}
+  .count{font-size:.85rem;color:var(--muted);white-space:nowrap;font-weight:600;
+       background:var(--card);border:1px solid var(--border);padding:7px 14px;border-radius:20px}
 
   /* ---------- Lista ---------- */
-  main{max-width:900px;margin:18px auto 40px;padding:0 18px}
+  main{max-width:1000px;margin:16px auto 40px;padding:0 20px}
+  .cat{font-family:'Montserrat';font-weight:800;font-size:.78rem;letter-spacing:1px;color:var(--brand);
+       text-transform:uppercase;display:flex;align-items:center;gap:12px;margin:26px 2px 12px}
+  .cat:first-child{margin-top:8px}
+  @media (prefers-color-scheme: dark){ .cat{color:#9cc2f0} }
+  .cat .line{flex:1;height:2px;background:var(--brand-tint);border-radius:2px}
+  .cat .n{font-family:'Inter';font-size:.72rem;font-weight:700;color:var(--muted);
+       background:var(--brand-tint);padding:2px 10px;border-radius:20px}
   .list{display:flex;flex-direction:column;gap:11px}
   a.item{display:flex;align-items:center;gap:15px;background:var(--card);border:1px solid var(--border);
        border-radius:var(--radius);padding:15px 16px;text-decoration:none;color:var(--text);box-shadow:var(--shadow);
@@ -90,18 +96,33 @@
        padding:2px 9px;border-radius:20px}
   @media (prefers-color-scheme: dark){ .date-chip{color:#9cc2f0} }
   .size{color:var(--muted);font-size:.8rem}
+  .novo{flex:0 0 auto;font-family:'Montserrat';font-weight:800;font-size:.6rem;letter-spacing:1px;
+       color:#7a5c12;background:rgba(216,180,90,.22);border:1px solid rgba(216,180,90,.5);
+       padding:3px 8px;border-radius:20px}
+  @media (prefers-color-scheme: dark){ .novo{color:#e6c877;background:rgba(216,180,90,.14)} }
   .chev{flex:0 0 auto;color:var(--muted);font-size:1.4rem;font-weight:300}
 
+  /* ---------- Skeleton / estados ---------- */
+  .skel{display:flex;flex-direction:column;gap:11px}
+  .skel .row{height:78px;border-radius:var(--radius);border:1px solid var(--border);
+       background:linear-gradient(90deg,var(--card) 0%,var(--skel) 50%,var(--card) 100%);
+       background-size:200% 100%;animation:sh 1.3s infinite linear}
+  @keyframes sh{to{background-position:-200% 0}}
   .state{text-align:center;color:var(--muted);padding:56px 20px}
   .state .big{font-size:2.6rem;margin-bottom:10px}
-  .state code{background:var(--card);padding:2px 7px;border-radius:6px;border:1px solid var(--border)}
-  .spin{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--brand);
-       border-radius:50%;animation:r .8s linear infinite;margin:46px auto}
-  @keyframes r{to{transform:rotate(360deg)}}
 
-  footer{max-width:900px;margin:0 auto;padding:22px 18px 46px;color:var(--muted);font-size:.78rem;
+  footer{max-width:1000px;margin:0 auto;padding:22px 20px 46px;color:var(--muted);font-size:.78rem;
        text-align:center;border-top:1px solid var(--border)}
   footer b{color:var(--text)}
+
+  @media(max-width:640px){
+    .bar-in{padding:14px 16px;gap:12px}
+    .brand-left{padding:8px 14px 8px 10px;gap:12px}
+    .stripes{width:56px;height:56px}
+    .head-txt h1{font-size:1.25rem}
+    .logos{margin-left:0;width:100%;justify-content:flex-start}
+    .name{white-space:normal}
+  }
 </style>
 </head>
 <body>
@@ -130,14 +151,17 @@
 
 <div class="toolbar">
   <div class="search">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-    <input type="search" id="q" placeholder="Buscar planograma por nome...">
+    <svg class="ic-s" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <input type="search" id="q" placeholder="Buscar por planograma ou categoria...">
+    <button class="clear" id="clear" aria-label="Limpar busca">×</button>
   </div>
   <span class="count" id="count"></span>
 </div>
 
 <main>
-  <div id="loader" class="spin"></div>
+  <div id="loader" class="skel">
+    <div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div>
+  </div>
   <div id="list" class="list"></div>
   <div id="empty" class="state" style="display:none"></div>
 </main>
@@ -148,13 +172,16 @@
 
 <script>
 // ==== CONFIGURAÇÃO ====
-// Pasta dos PDFs. "" = raiz do repositório (basta arrastar os PDFs, sem criar pasta).
-const PASTA = "";
+const BRANCH = "main";   // branch do repositório onde ficam os arquivos
 // ======================
+// Como agrupar por categoria: crie uma PASTA por categoria no repositório
+// (ex.: "02 - Líquida") e coloque os PDFs dentro dela. Cada pasta vira uma
+// categoria na tela. PDFs soltos na raiz aparecem em "Geral".
 
 const listEl=document.getElementById('list'), emptyEl=document.getElementById('empty'),
-      loaderEl=document.getElementById('loader'), countEl=document.getElementById('count');
-let arquivos=[];
+      loaderEl=document.getElementById('loader'), countEl=document.getElementById('count'),
+      qEl=document.getElementById('q'), clearEl=document.getElementById('clear');
+let arquivos=[], newestKey=null;
 
 function detectRepo(){
   const host=location.hostname, owner=host.split('.')[0];
@@ -163,19 +190,31 @@ function detectRepo(){
 }
 function fmtSize(b){ if(b==null)return''; if(b<1024)return b+' B';
   if(b<1048576)return (b/1024).toFixed(0)+' KB'; return (b/1048576).toFixed(1)+' MB'; }
+function baseName(path){ const p=path.split('/'); return p[p.length-1]; }
 function parseDate(name){ const m=name.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
   return m ? {label:`${m[1]}/${m[2]}/${m[3]}`, key:m[3]+m[2]+m[1]} : null; }
-function nomeBonito(f){
-  return f.replace(/\.pdf$/i,'')
-          .replace(/^\d{2}\.\d{2}\.\d{4}\s*-\s*/,'')   // tira a data do começo
-          .replace(/\s*-\s*/g,' · ')                    // separadores mais elegantes
-          .trim();
+function nomeBonito(name){
+  return name.replace(/\.pdf$/i,'')
+             .replace(/^\d{2}\.\d{2}\.\d{4}\s*-\s*/,'')
+             .replace(/\s*-\s*/g,' · ')
+             .trim();
 }
+// Categoria = 1ª pasta do caminho. Ex.: "02 - Líquida/arquivo.pdf" -> "Líquida"
+function catFromPath(path){
+  const parts=path.split('/');
+  if(parts.length<2) return {sort:'￿', label:'Geral'};
+  const raw=parts[0];
+  const label=(raw.replace(/^\d+\s*[-.–]\s*/,'').trim())||raw;
+  return {sort:raw.toLowerCase(), label};
+}
+function esc(s){ return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 
 function render(filtro=''){
-  const f=filtro.toLowerCase();
-  const vis=arquivos.filter(a=>nomeBonito(a.name).toLowerCase().includes(f));
+  const f=filtro.toLowerCase().trim();
+  const vis=arquivos.filter(a=>
+     nomeBonito(a.name).toLowerCase().includes(f) || a.cat.label.toLowerCase().includes(f));
   listEl.innerHTML='';
+  countEl.textContent=vis.length+(vis.length===1?' planograma':' planogramas');
   if(!vis.length){
     emptyEl.style.display='block';
     emptyEl.innerHTML=arquivos.length
@@ -184,8 +223,17 @@ function render(filtro=''){
     return;
   }
   emptyEl.style.display='none';
+  const counts={}; vis.forEach(a=>counts[a.cat.sort]=(counts[a.cat.sort]||0)+1);
+  let cur=null;
   for(const a of vis){
+    if(a.cat.sort!==cur){
+      cur=a.cat.sort;
+      const h=document.createElement('div'); h.className='cat';
+      h.innerHTML=`<span>${esc(a.cat.label)}</span><span class="line"></span><span class="n">${counts[cur]}</span>`;
+      listEl.appendChild(h);
+    }
     const dt=parseDate(a.name);
+    const novo=a.key && a.key===newestKey;
     const link=document.createElement('a');
     link.className='item'; link.href=a.path; link.target='_blank'; link.rel='noopener';
     link.innerHTML=
@@ -194,6 +242,7 @@ function render(filtro=''){
         (dt?'<span class="date-chip">📅 '+dt.label+'</span>':'')+
         '<span class="size">'+fmtSize(a.size)+'</span>'+
       '</span></span>'+
+      (novo?'<span class="novo">NOVO</span>':'')+
       '<span class="chev">›</span>';
     link.querySelector('.name').textContent=nomeBonito(a.name);
     listEl.appendChild(link);
@@ -202,25 +251,31 @@ function render(filtro=''){
 
 async function carregar(){
   const {owner,repo}=detectRepo();
-  const dir=PASTA ? '/'+PASTA.replace(/^\/|\/$/g,'') : '';
-  const api=`https://api.github.com/repos/${owner}/${repo}/contents${dir}`;
+  const api=`https://api.github.com/repos/${owner}/${repo}/git/trees/${BRANCH}?recursive=1`;
   try{
     const r=await fetch(api,{headers:{'Accept':'application/vnd.github.v3+json'}});
     if(!r.ok) throw new Error('HTTP '+r.status);
     const data=await r.json();
-    const base=PASTA ? PASTA.replace(/^\/|\/$/g,'')+'/' : '';
-    arquivos=(Array.isArray(data)?data:[])
-      .filter(x=>x.type==='file' && /\.pdf$/i.test(x.name))
-      .map(x=>({name:x.name,size:x.size,path:base+encodeURIComponent(x.name)}));
+    arquivos=(data.tree||[])
+      .filter(x=>x.type==='blob' && /\.pdf$/i.test(x.path))
+      .map(x=>{
+        const name=baseName(x.path);
+        return {
+          name, size:x.size,
+          path:x.path.split('/').map(encodeURIComponent).join('/'),
+          key:parseDate(name)?.key||null,
+          cat:catFromPath(x.path)
+        };
+      });
     arquivos.sort((a,b)=>{
-      const da=parseDate(a.name)?.key, db=parseDate(b.name)?.key;
-      if(da&&db) return db.localeCompare(da);   // mais recentes primeiro
-      if(da) return -1; if(db) return 1;
-      return nomeBonito(a.name).localeCompare(nomeBonito(b.name),'pt-BR');
+      if(a.cat.sort!==b.cat.sort) return a.cat.sort<b.cat.sort?-1:1;   // categoria
+      if(a.key&&b.key) return b.key.localeCompare(a.key);              // data desc
+      if(a.key) return -1; if(b.key) return 1;
+      return a.name.localeCompare(b.name,'pt-BR');
     });
+    newestKey=arquivos.reduce((mx,a)=>a.key&&(!mx||a.key>mx)?a.key:mx,null);
     loaderEl.style.display='none';
-    render(document.getElementById('q').value);
-    countEl.textContent=arquivos.length+(arquivos.length===1?' planograma':' planogramas');
+    render(qEl.value);
   }catch(e){
     loaderEl.style.display='none';
     emptyEl.style.display='block';
@@ -229,7 +284,8 @@ async function carregar(){
   }
 }
 
-document.getElementById('q').addEventListener('input',e=>render(e.target.value));
+qEl.addEventListener('input',e=>{ clearEl.style.display=e.target.value?'block':'none'; render(e.target.value); });
+clearEl.addEventListener('click',()=>{ qEl.value=''; clearEl.style.display='none'; render(''); qEl.focus(); });
 carregar();
 </script>
 </body>
