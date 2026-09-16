@@ -216,17 +216,21 @@ function parseData(str){
 function parseNomeData(name){ const m=name.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
   return m ? {ts:Date.UTC(+m[3],+m[2]-1,+m[1]), label:`${m[1]}/${m[2]}/${m[3]}`} : null; }
 function nomeBonito(name){
-  return name.replace(/\.pdf$/i,'')
-             .replace(/^\d{2}\.\d{2}\.\d{4}\s*-\s*/,'')
-             .replace(/^planograma\s*-\s*/i,'')
-             .replace(/\s*-\s*/g,' · ')
-             .trim();
+  let s=name.replace(/\.pdf$/i,'');
+  const i=s.indexOf('@'); if(i>=0) s=s.slice(i+1);     // remove "Categoria @"
+  return s.replace(/^\d{2}\.\d{2}\.\d{4}\s*-\s*/,'')
+          .replace(/^planograma\s*-\s*/i,'')
+          .replace(/\s*-\s*/g,' · ')
+          .trim();
 }
-function catFromPath(path){
+// Categoria: 1º pelo nome do arquivo ("Categoria @ Produto.pdf"); senão, pela pasta.
+function categoria(path, filename){
+  const base=filename.replace(/\.pdf$/i,'');
+  const i=base.indexOf('@');
+  if(i>=0){ const c=base.slice(0,i).trim(); if(c) return {sort:c.toLowerCase(), label:c}; }
   const parts=path.split('/');
-  if(parts.length<2) return {sort:'￿', label:'Geral'};
-  const raw=parts[0].trim();
-  return {sort:raw.toLowerCase(), label:raw};
+  if(parts.length>=2){ const raw=parts[0].trim(); return {sort:raw.toLowerCase(), label:raw}; }
+  return {sort:'￿', label:'Geral'};
 }
 function esc(s){ return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 function norm(s){ return s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
@@ -313,7 +317,7 @@ async function carregar(){
       .filter(x=>x.type==='blob' && /\.pdf$/i.test(x.path))
       .map(x=>({ name:baseName(x.path), size:x.size, sha:x.sha, rawpath:x.path,
                  path:x.path.split('/').map(encodeURIComponent).join('/'),
-                 cat:catFromPath(x.path), ts:null, dateLabel:'', status:'' }));
+                 cat:categoria(x.path, baseName(x.path)), ts:null, dateLabel:'', status:'' }));
     arquivos.forEach(aplicarManifesto);
     loaderEl.style.display='none';
     render(qEl.value);
