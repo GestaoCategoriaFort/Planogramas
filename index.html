@@ -98,10 +98,12 @@
        padding:2px 9px;border-radius:20px}
   @media (prefers-color-scheme: dark){ .date-chip{color:#9cc2f0} }
   .size{color:var(--muted);font-size:.8rem}
-  .novo{flex:0 0 auto;font-family:'Montserrat';font-weight:800;font-size:.6rem;letter-spacing:1px;
-       color:#7a5c12;background:rgba(216,180,90,.22);border:1px solid rgba(216,180,90,.5);
-       padding:3px 8px;border-radius:20px}
-  @media (prefers-color-scheme: dark){ .novo{color:#e6c877;background:rgba(216,180,90,.14)} }
+  .tag{flex:0 0 auto;font-family:'Montserrat';font-weight:800;font-size:.6rem;letter-spacing:1px;
+       padding:3px 8px;border-radius:20px;white-space:nowrap}
+  .tag.novo{color:#7a5c12;background:rgba(216,180,90,.22);border:1px solid rgba(216,180,90,.55)}
+  .tag.atu{color:#fff;background:var(--brand);border:1px solid var(--brand)}
+  @media (prefers-color-scheme: dark){ .tag.novo{color:#e6c877;background:rgba(216,180,90,.14)}
+       .tag.atu{background:#3b6bb0;border-color:#3b6bb0} }
   .chev{flex:0 0 auto;color:var(--muted);font-size:1.4rem;font-weight:300}
 
   /* ---------- Skeleton / estados ---------- */
@@ -174,36 +176,52 @@
 
 <script>
 // ==== CONFIGURAÇÃO ====
-const BRANCH = "main";   // branch do repositório onde ficam os arquivos
+const BRANCH    = "main";              // branch onde ficam os arquivos
+const MANIFESTO = "planogramas.json";  // lista (você controla) com a data/status de cada planograma
+const DIAS_SELO = 30;                  // por quantos dias o selo NOVO/ATUALIZADO fica visível
 // ======================
-// Como agrupar por categoria: crie uma PASTA por categoria no repositório
-// (ex.: "02 - Líquida") e coloque os PDFs dentro dela. Cada pasta vira uma
-// categoria na tela. PDFs soltos na raiz aparecem em "Geral".
+// A DATA do card vem do arquivo "planogramas.json" (na raiz do repositório), que VOCÊ controla.
+// Assim a data é sempre a data real do planograma, e não a data do upload.
+// Formato aceito:
+// {
+//   "02 - Líquida/Água Mineral.pdf": { "data": "31/08/2026", "status": "atualizado" },
+//   "02 - Líquida/Isotônicos.pdf":   { "data": "26/08/2026", "status": "novo" },
+//   "05 - Perfumaria/Shampoo.pdf":   "12/09/2026"
+// }
+// "status" é opcional ("novo" ou "atualizado"). A data pode ser dd/mm/aaaa, dd.mm.aaaa ou aaaa-mm-dd.
+// A chave pode ser o caminho completo (pasta/arquivo.pdf) ou só o nome do arquivo.
 
 const listEl=document.getElementById('list'), emptyEl=document.getElementById('empty'),
       loaderEl=document.getElementById('loader'), countEl=document.getElementById('count'),
       qEl=document.getElementById('q'), clearEl=document.getElementById('clear');
-let arquivos=[], newestKey=null;
+let arquivos=[], owner=null, repo=null, manifesto={};
 
 function detectRepo(){
-  const host=location.hostname, owner=host.split('.')[0];
+  const host=location.hostname, o=host.split('.')[0];
   const parts=location.pathname.split('/').filter(Boolean);
-  return {owner, repo: parts.length ? parts[0] : host};
+  return {owner:o, repo: parts.length ? parts[0] : host};
 }
 function fmtSize(b){ if(b==null)return''; if(b<1024)return b+' B';
   if(b<1048576)return (b/1024).toFixed(0)+' KB'; return (b/1048576).toFixed(1)+' MB'; }
 function baseName(path){ const p=path.split('/'); return p[p.length-1]; }
-function parseDate(name){ const m=name.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
-  return m ? {label:`${m[1]}/${m[2]}/${m[3]}`, key:m[3]+m[2]+m[1]} : null; }
+function pad(n){ return String(n).padStart(2,'0'); }
+// aceita dd/mm/aaaa, dd.mm.aaaa e aaaa-mm-dd
+function parseData(str){
+  if(!str) return null; str=String(str).trim(); let m;
+  if(m=str.match(/^(\d{4})-(\d{2})-(\d{2})/)) return {ts:Date.UTC(+m[1],+m[2]-1,+m[3]), label:`${m[3]}/${m[2]}/${m[1]}`};
+  if(m=str.match(/^(\d{2})[\/.](\d{2})[\/.](\d{4})/)) return {ts:Date.UTC(+m[3],+m[2]-1,+m[1]), label:`${m[1]}/${m[2]}/${m[3]}`};
+  return null;
+}
+// data no próprio nome do arquivo (fallback, se ainda houver)
+function parseNomeData(name){ const m=name.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+  return m ? {ts:Date.UTC(+m[3],+m[2]-1,+m[1]), label:`${m[1]}/${m[2]}/${m[3]}`} : null; }
 function nomeBonito(name){
   return name.replace(/\.pdf$/i,'')
-             .replace(/^\d{2}\.\d{2}\.\d{4}\s*-\s*/,'')   // remove a data do começo
-             .replace(/^planograma\s*-\s*/i,'')            // remove "Planograma -"
-             .replace(/\s*-\s*/g,' · ')                     // separadores restantes
+             .replace(/^\d{2}\.\d{2}\.\d{4}\s*-\s*/,'')
+             .replace(/^planograma\s*-\s*/i,'')
+             .replace(/\s*-\s*/g,' · ')
              .trim();
 }
-// Categoria = 1ª pasta do caminho, mantendo o número do corredor.
-// Ex.: "02 - Líquida/arquivo.pdf" -> exibe "02 - Líquida" (ordena pelo número).
 function catFromPath(path){
   const parts=path.split('/');
   if(parts.length<2) return {sort:'￿', label:'Geral'};
@@ -211,13 +229,37 @@ function catFromPath(path){
   return {sort:raw.toLowerCase(), label:raw};
 }
 function esc(s){ return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
-// Normaliza para busca: minúsculo e sem acento (ex.: "Água" -> "agua")
 function norm(s){ return s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
+function statusNorm(s){ if(!s) return ''; s=norm(String(s));
+  if(s.startsWith('atu')||s.startsWith('upd')) return 'atualizado';
+  if(s.startsWith('nov')||s.startsWith('new')) return 'novo'; return ''; }
+
+// procura a entrada do arquivo na lista (por caminho ou por nome)
+function buscaManifesto(a){
+  if(manifesto[a.rawpath]!=null) return manifesto[a.rawpath];
+  if(manifesto[a.name]!=null) return manifesto[a.name];
+  const k=Object.keys(manifesto).find(k=>k===a.rawpath || baseName(k)===a.name);
+  return k!=null ? manifesto[k] : null;
+}
+function aplicarManifesto(a){
+  const v=buscaManifesto(a);
+  let dataStr=null, status='';
+  if(typeof v==='string') dataStr=v;
+  else if(v && typeof v==='object'){ dataStr=v.data||v.date||v.dt||null; status=v.status||v.selo||''; }
+  const d=parseData(dataStr) || parseNomeData(a.name);   // fallback: data no nome
+  if(d){ a.ts=d.ts; a.dateLabel=d.label; } else { a.ts=null; a.dateLabel=''; }
+  a.status=statusNorm(status);
+}
 
 function render(filtro=''){
   const f=norm(filtro.trim());
-  const vis=arquivos.filter(a=>
-     norm(nomeBonito(a.name)).includes(f) || norm(a.cat.label).includes(f));
+  const vis=arquivos.filter(a=>norm(nomeBonito(a.name)).includes(f) || norm(a.cat.label).includes(f));
+  vis.sort((a,b)=>{
+    if(a.cat.sort!==b.cat.sort) return a.cat.sort<b.cat.sort?-1:1;
+    const ta=a.ts||0, tb=b.ts||0;
+    if(ta!==tb) return tb-ta;
+    return a.name.localeCompare(b.name,'pt-BR');
+  });
   listEl.innerHTML='';
   countEl.textContent=vis.length+(vis.length===1?' planograma':' planogramas');
   if(!vis.length){
@@ -229,6 +271,7 @@ function render(filtro=''){
   }
   emptyEl.style.display='none';
   const counts={}; vis.forEach(a=>counts[a.cat.sort]=(counts[a.cat.sort]||0)+1);
+  const agora=Date.now();
   let cur=null;
   for(const a of vis){
     if(a.cat.sort!==cur){
@@ -237,17 +280,19 @@ function render(filtro=''){
       h.innerHTML=`<span>${esc(a.cat.label)}</span><span class="line"></span><span class="n">${counts[cur]}</span>`;
       listEl.appendChild(h);
     }
-    const dt=parseDate(a.name);
-    const novo=a.key && a.key===newestKey;
+    let tag='';
+    if(a.status && (!a.ts || (agora - a.ts) <= DIAS_SELO*86400000)){
+      tag = a.status==='atualizado' ? '<span class="tag atu">ATUALIZADO</span>' : '<span class="tag novo">NOVO</span>';
+    }
     const link=document.createElement('a');
     link.className='item'; link.href=a.path; link.target='_blank'; link.rel='noopener';
     link.innerHTML=
       '<span class="pdf-ic">PDF</span>'+
       '<span class="meta"><span class="name"></span><span class="subline">'+
-        (dt?'<span class="date-chip">📅 '+dt.label+'</span>':'')+
+        (a.dateLabel?'<span class="date-chip">📅 '+a.dateLabel+'</span>':'')+
         '<span class="size">'+fmtSize(a.size)+'</span>'+
       '</span></span>'+
-      (novo?'<span class="novo">NOVO</span>':'')+
+      tag+
       '<span class="chev">›</span>';
     link.querySelector('.name').textContent=nomeBonito(a.name);
     listEl.appendChild(link);
@@ -255,30 +300,21 @@ function render(filtro=''){
 }
 
 async function carregar(){
-  const {owner,repo}=detectRepo();
-  const api=`https://api.github.com/repos/${owner}/${repo}/git/trees/${BRANCH}?recursive=1`;
+  ({owner,repo}=detectRepo());
+  const treeApi=`https://api.github.com/repos/${owner}/${repo}/git/trees/${BRANCH}?recursive=1`;
+  // lê a lista (planogramas.json) em paralelo — best effort, sem quebrar se não existir
+  const mPromise=fetch(MANIFESTO+'?t='+Date.now()).then(r=>r.ok?r.json():{}).catch(()=>({}));
   try{
-    const r=await fetch(api,{headers:{'Accept':'application/vnd.github.v3+json'}});
+    const r=await fetch(treeApi,{headers:{'Accept':'application/vnd.github.v3+json'}});
     if(!r.ok) throw new Error('HTTP '+r.status);
     const data=await r.json();
+    try{ manifesto=await mPromise||{}; }catch(e){ manifesto={}; }
     arquivos=(data.tree||[])
       .filter(x=>x.type==='blob' && /\.pdf$/i.test(x.path))
-      .map(x=>{
-        const name=baseName(x.path);
-        return {
-          name, size:x.size,
-          path:x.path.split('/').map(encodeURIComponent).join('/'),
-          key:parseDate(name)?.key||null,
-          cat:catFromPath(x.path)
-        };
-      });
-    arquivos.sort((a,b)=>{
-      if(a.cat.sort!==b.cat.sort) return a.cat.sort<b.cat.sort?-1:1;   // categoria
-      if(a.key&&b.key) return b.key.localeCompare(a.key);              // data desc
-      if(a.key) return -1; if(b.key) return 1;
-      return a.name.localeCompare(b.name,'pt-BR');
-    });
-    newestKey=arquivos.reduce((mx,a)=>a.key&&(!mx||a.key>mx)?a.key:mx,null);
+      .map(x=>({ name:baseName(x.path), size:x.size, sha:x.sha, rawpath:x.path,
+                 path:x.path.split('/').map(encodeURIComponent).join('/'),
+                 cat:catFromPath(x.path), ts:null, dateLabel:'', status:'' }));
+    arquivos.forEach(aplicarManifesto);
     loaderEl.style.display='none';
     render(qEl.value);
   }catch(e){
