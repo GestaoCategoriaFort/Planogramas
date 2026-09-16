@@ -211,11 +211,13 @@ function catFromPath(path){
   return {sort:raw.toLowerCase(), label:raw};
 }
 function esc(s){ return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+// Normaliza para busca: minúsculo e sem acento (ex.: "Água" -> "agua")
+function norm(s){ return s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
 
 function render(filtro=''){
-  const f=filtro.toLowerCase().trim();
+  const f=norm(filtro.trim());
   const vis=arquivos.filter(a=>
-     nomeBonito(a.name).toLowerCase().includes(f) || a.cat.label.toLowerCase().includes(f));
+     norm(nomeBonito(a.name)).includes(f) || norm(a.cat.label).includes(f));
   listEl.innerHTML='';
   countEl.textContent=vis.length+(vis.length===1?' planograma':' planogramas');
   if(!vis.length){
