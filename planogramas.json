@@ -84,32 +84,37 @@
   },
   "02 - Líquida @ Bebidas Funcionais e Isotônicos.pdf": {
     "data": "18/09/2026",
-    "status": "atualizado",
+    "status": "",
     "desde": "2026-09-28"
   },
   "02 - Líquida @ Chá Pronto.pdf": {
     "data": "18/09/2026",
-    "status": "atualizado",
+    "status": "",
     "desde": "2026-09-28"
   },
   "02 - Líquida @ Consumo Individual.pdf": {
     "data": "18/09/2026",
-    "status": "atualizado",
+    "status": "",
     "desde": "2026-09-28"
   },
   "02 - Líquida @ Refresco e Suco Concentrado.pdf": {
     "data": "18/09/2026",
-    "status": "atualizado",
+    "status": "",
     "desde": "2026-09-28"
   },
   "02 - Líquida @ Suco Caixa.pdf": {
     "data": "18/09/2026",
-    "status": "atualizado",
+    "status": "",
     "desde": "2026-09-28"
   },
   "02 - Líquida @ Suco Integral e Suco Misto.pdf": {
     "data": "18/09/2026",
-    "status": "atualizado",
+    "status": "",
     "desde": "2026-09-28"
+  },
+  "03 - Bazar Cozinha e Descartáveis @ Bazar Descartáveis.pdf": {
+    "data": "29/09/2026",
+    "status": "novo",
+    "desde": "2026-09-29"
   }
 }
