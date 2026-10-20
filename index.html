@@ -69,6 +69,13 @@
   .count{font-size:.85rem;color:var(--muted);white-space:nowrap;font-weight:600;
        background:var(--card);border:1px solid var(--border);padding:7px 14px;border-radius:20px}
 
+  /* ---------- Filtros ---------- */
+  .filtros{max-width:1000px;margin:10px auto 0;padding:0 20px;display:flex;gap:8px;flex-wrap:wrap}
+  .chip{font-family:'Inter';font-size:.8rem;font-weight:600;color:var(--muted);background:var(--card);
+       border:1px solid var(--border);padding:6px 13px;border-radius:20px;cursor:pointer;transition:.15s}
+  .chip:hover{border-color:var(--brand)}
+  .chip.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+
   /* ---------- Lista ---------- */
   main{max-width:1000px;margin:16px auto 40px;padding:0 20px}
   .cat{font-family:'Montserrat';font-weight:800;font-size:.78rem;letter-spacing:1px;color:var(--brand);
@@ -162,6 +169,11 @@
   <span class="count" id="count"></span>
 </div>
 
+<div class="filtros">
+  <span class="chip on" data-f="todos">Todos</span>
+  <span class="chip" data-f="recentes">🆕 Recentes (novo/atualizado)</span>
+</div>
+
 <main>
   <div id="loader" class="skel">
     <div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div>
@@ -178,23 +190,19 @@
 // ==== CONFIGURAÇÃO ====
 const BRANCH    = "main";              // branch onde ficam os arquivos
 const MANIFESTO = "planogramas.json";  // lista (você controla) com a data/status de cada planograma
-const DIAS_SELO = 15;                  // por quantos dias o selo NOVO/ATUALIZADO fica visível
+const DIAS_SELO = 15;                  // dias que o selo NOVO/ATUALIZADO fica visível (contados a partir de "desde")
 // ======================
-// A DATA do card vem do arquivo "planogramas.json" (na raiz do repositório), que VOCÊ controla.
-// Assim a data é sempre a data real do planograma, e não a data do upload.
-// Formato aceito:
-// {
-//   "02 - Líquida/Água Mineral.pdf": { "data": "31/08/2026", "status": "atualizado" },
-//   "02 - Líquida/Isotônicos.pdf":   { "data": "26/08/2026", "status": "novo" },
-//   "05 - Perfumaria/Shampoo.pdf":   "12/09/2026"
-// }
-// "status" é opcional ("novo" ou "atualizado"). A data pode ser dd/mm/aaaa, dd.mm.aaaa ou aaaa-mm-dd.
-// A chave pode ser o caminho completo (pasta/arquivo.pdf) ou só o nome do arquivo.
+// A DATA do card vem do "planogramas.json" (campo "data") — é a data real do planograma.
+// O SELO (novo/atualizado) some sozinho depois de DIAS_SELO, contados a partir do campo "desde"
+// (o dia em que você marcou como novo/atualizado). O programa preenche "desde" automaticamente.
+// Formato de cada item:
+//   "02 - Líquida @ Água Mineral.pdf": { "data": "31/08/2026", "status": "atualizado", "desde": "2026-10-19" }
+// "status" e "desde" são opcionais. A data aceita dd/mm/aaaa, dd.mm.aaaa ou aaaa-mm-dd.
 
 const listEl=document.getElementById('list'), emptyEl=document.getElementById('empty'),
       loaderEl=document.getElementById('loader'), countEl=document.getElementById('count'),
       qEl=document.getElementById('q'), clearEl=document.getElementById('clear');
-let arquivos=[], owner=null, repo=null, manifesto={};
+let arquivos=[], owner=null, repo=null, manifesto={}, filtroAtivo="todos";
 
 function detectRepo(){
   const host=location.hostname, o=host.split('.')[0];
@@ -247,17 +255,32 @@ function buscaManifesto(a){
 }
 function aplicarManifesto(a){
   const v=buscaManifesto(a);
-  let dataStr=null, status='';
+  let dataStr=null, status='', desdeStr=null;
   if(typeof v==='string') dataStr=v;
-  else if(v && typeof v==='object'){ dataStr=v.data||v.date||v.dt||null; status=v.status||v.selo||''; }
-  const d=parseData(dataStr) || parseNomeData(a.name);   // fallback: data no nome
+  else if(v && typeof v==='object'){
+    dataStr = v.data||v.date||v.dt||null;
+    status  = v.status||v.selo||'';
+    desdeStr= v.desde||v.since||v.marcado||null;   // quando virou novo/atualizado
+  }
+  const d=parseData(dataStr) || parseNomeData(a.name);   // data mostrada no card
   if(d){ a.ts=d.ts; a.dateLabel=d.label; } else { a.ts=null; a.dateLabel=''; }
-  a.status=statusNorm(status);
+  const dd=parseData(desdeStr);
+  a.desdeTs = dd ? dd.ts : null;                         // referência para expirar o selo
+  a.status  = statusNorm(status);
+}
+
+// o selo está ativo? conta a partir de "desde"; se não houver, usa a data; se não houver nenhum, mostra.
+function seloAtivo(a){
+  if(!a.status) return false;
+  const ref = (a.desdeTs!=null) ? a.desdeTs : a.ts;
+  if(ref==null) return true;
+  return (Date.now() - ref) <= DIAS_SELO*86400000;
 }
 
 function render(filtro=''){
   const f=norm(filtro.trim());
-  const vis=arquivos.filter(a=>norm(nomeBonito(a.name)).includes(f) || norm(a.cat.label).includes(f));
+  let vis=arquivos.filter(a=>norm(nomeBonito(a.name)).includes(f) || norm(a.cat.label).includes(f));
+  if(filtroAtivo==='recentes') vis=vis.filter(seloAtivo);
   vis.sort((a,b)=>{
     if(a.cat.sort!==b.cat.sort) return a.cat.sort<b.cat.sort?-1:1;
     const ta=a.ts||0, tb=b.ts||0;
@@ -269,13 +292,12 @@ function render(filtro=''){
   if(!vis.length){
     emptyEl.style.display='block';
     emptyEl.innerHTML=arquivos.length
-      ? '<div class="big">🔍</div>Nenhum planograma encontrado para essa busca.'
+      ? '<div class="big">🔍</div>Nenhum planograma encontrado.'
       : '<div class="big">📭</div>Nenhum planograma publicado ainda.<br>Suba os PDFs no repositório e eles aparecem aqui automaticamente.';
     return;
   }
   emptyEl.style.display='none';
   const counts={}; vis.forEach(a=>counts[a.cat.sort]=(counts[a.cat.sort]||0)+1);
-  const agora=Date.now();
   let cur=null;
   for(const a of vis){
     if(a.cat.sort!==cur){
@@ -285,7 +307,7 @@ function render(filtro=''){
       listEl.appendChild(h);
     }
     let tag='';
-    if(a.status && (!a.ts || (agora - a.ts) <= DIAS_SELO*86400000)){
+    if(seloAtivo(a)){
       tag = a.status==='atualizado' ? '<span class="tag atu">ATUALIZADO</span>' : '<span class="tag novo">NOVO</span>';
     }
     const link=document.createElement('a');
@@ -306,10 +328,9 @@ function render(filtro=''){
 async function carregar(){
   ({owner,repo}=detectRepo());
   const treeApi=`https://api.github.com/repos/${owner}/${repo}/git/trees/${BRANCH}?recursive=1`;
-  // lê a lista (planogramas.json) em paralelo — best effort, sem quebrar se não existir
-  const mPromise=fetch(MANIFESTO+'?t='+Date.now()).then(r=>r.ok?r.json():{}).catch(()=>({}));
+  const mPromise=fetch(MANIFESTO+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():{}).catch(()=>({}));
   try{
-    const r=await fetch(treeApi,{headers:{'Accept':'application/vnd.github.v3+json'}});
+    const r=await fetch(treeApi,{headers:{'Accept':'application/vnd.github.v3+json'},cache:'no-store'});
     if(!r.ok) throw new Error('HTTP '+r.status);
     const data=await r.json();
     try{ manifesto=await mPromise||{}; }catch(e){ manifesto={}; }
@@ -317,9 +338,10 @@ async function carregar(){
       .filter(x=>x.type==='blob' && /\.pdf$/i.test(x.path))
       .map(x=>({ name:baseName(x.path), size:x.size, sha:x.sha, rawpath:x.path,
                  path:x.path.split('/').map(encodeURIComponent).join('/'),
-                 cat:categoria(x.path, baseName(x.path)), ts:null, dateLabel:'', status:'' }));
+                 cat:categoria(x.path, baseName(x.path)), ts:null, dateLabel:'', status:'', desdeTs:null }));
     arquivos.forEach(aplicarManifesto);
     loaderEl.style.display='none';
+    atualizarChipRecentes();
     render(qEl.value);
   }catch(e){
     loaderEl.style.display='none';
@@ -329,8 +351,19 @@ async function carregar(){
   }
 }
 
+function atualizarChipRecentes(){
+  const n=arquivos.filter(seloAtivo).length;
+  const chip=document.querySelector('.chip[data-f="recentes"]');
+  chip.textContent = n ? ('🆕 Recentes ('+n+')') : '🆕 Recentes';
+  chip.style.display = n ? '' : 'none';
+}
+
 qEl.addEventListener('input',e=>{ clearEl.style.display=e.target.value?'block':'none'; render(e.target.value); });
 clearEl.addEventListener('click',()=>{ qEl.value=''; clearEl.style.display='none'; render(''); qEl.focus(); });
+document.querySelectorAll('.chip').forEach(ch=>ch.addEventListener('click',()=>{
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+  ch.classList.add('on'); filtroAtivo=ch.dataset.f; render(qEl.value);
+}));
 carregar();
 </script>
 </body>
